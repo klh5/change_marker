@@ -92,7 +92,7 @@ if __name__ == '__main__':
 		for tile_index, tile in tile_list.items():
 			dataset = gw.load(tile[0:1, 0:1, 0:10], measurements=['red', 'nir']) # Only need red and NIR to calculate NDVI
 
-			if(dataset.notnull()):
+			if(dataset.variables):
 				sref_ds.append(dataset)
 
 	# Close datacube connection to database
