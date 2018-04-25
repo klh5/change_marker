@@ -31,7 +31,7 @@ class GetChangePoints(object):
 			if(not self.start):
 				line_col = 'r'
 			else:
-				line_col = 'g'
+				line_col = 'b'
 
 			self.ax.axvline(x=x_point, color=line_col, alpha=0.5)
 			self.fig.canvas.draw()
