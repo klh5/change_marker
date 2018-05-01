@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
 		# Load all tiles
 		for tile_index, tile in tile_list.items():
-			dataset = gw.load(tile[0:1, 0:1, 0:10], measurements=['red', 'nir']) # Only need red and NIR to calculate NDVI
+			dataset = gw.load(tile[0:1, 0:1, 0:1], measurements=['red', 'nir', 'blue', 'green'])
 
 			if(dataset.variables):
 				sref_ds.append(dataset)
@@ -113,9 +113,12 @@ if __name__ == '__main__':
 	
 			# Transform to pandas dataframe
 			sref_data = transformToDf(sref_ts)
+				
+			# Drop rows with NA values in any column
+			sref_data.dropna(axis=0, how='any', inplace=True)
 
 			# Check columns weren't dropped
-			if(sref_data.shape[1] == 3):
+			if(sref_data.shape[1] == 5):
 
 				# Get projected coordinates of this pixel
 				x_val = float(sref_ts.x)
@@ -127,17 +130,24 @@ if __name__ == '__main__':
 				# Calculate NDVI: (NIR-red) / (NIR+red)
 				sref_data["ndvi"] = (sref_data.nir - sref_data.red) / (sref_data.nir + sref_data.red)
 
+				r = (sref_data.red - min(sref_data.red)) / (max(sref_data.red) - min(sref_data.red))
+				g = (sref_data.green - min(sref_data.green)) / (max(sref_data.green) - min(sref_data.green))
+				b = (sref_data.blue - min(sref_data.blue)) / (max(sref_data.blue) - min(sref_data.blue))
+
+				rgb_to_list = [list(i) for i in list(zip(r, g, b))]
+				colour_list = np.array(rgb_to_list)
+
 				# Set up the plot
 				fig, ax = plt.subplots(figsize=(25, 5))
-				ax.plot(sref_data.datetime, sref_data.ndvi, 'o', markersize=2)
+				ax.scatter(sref_data.datetime, sref_data.ndvi, c=colour_list, alpha=0.8)
 
-				# Format dates to month/year rather than rata die
 				myFmt = mdates.DateFormatter('%m/%Y')
 				ax.xaxis.set_major_formatter(myFmt)
 
-				pointy = GetChangePoints(ax)
+				pointy = GetChangePoints(ax)	
 
-				plt.show()		
+				plt.tight_layout()
+				plt.show()
 
 				xlist = pointy.get_xlist()
 
