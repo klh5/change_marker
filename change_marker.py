@@ -7,6 +7,9 @@ import datacube
 import xarray as xr
 from datacube.api import GridWorkflow
 from datacube.storage.masking import mask_invalid_data
+from statsmodels.graphics.regressionplots import abline_plot
+import statsmodels.formula.api as smf
+from scipy.interpolate import interp1d
 
 sref_products = ['ls5_arcsi_sref_ingested', 'ls7_arcsi_sref_ingested', 'ls8_arcsi_sref_ingested']
 
@@ -90,7 +93,7 @@ if __name__ == '__main__':
 
 		# Load all tiles
 		for tile_index, tile in tile_list.items():
-			dataset = gw.load(tile[0:1, 0:1, 0:1], measurements=['red', 'nir', 'blue', 'green'])
+			dataset = gw.load(tile[0:1, 400:401, 0:1], measurements=['red', 'nir', 'blue', 'green']) # 200ish/400ish
 
 			if(dataset.variables):
 				sref_ds.append(dataset)
@@ -137,9 +140,19 @@ if __name__ == '__main__':
 				rgb_to_list = [list(i) for i in list(zip(r, g, b))]
 				colour_list = np.array(rgb_to_list)
 
+				pi_val_simple = (2 * np.pi) / 365
+
+				ols_model = smf.ols('ndvi ~ np.cos(pi_val_simple * datetime) + np.sin(pi_val_simple * datetime) + datetime', sref_data).fit()
+
 				# Set up the plot
 				fig, ax = plt.subplots(figsize=(25, 5))
-				ax.scatter(sref_data.datetime, sref_data.ndvi, c=colour_list, alpha=0.8)
+				ax.scatter(sref_data.datetime, sref_data.ndvi, c=colour_list, alpha=1, s=40)
+				
+				# Plot regression model
+				f = interp1d(sref_data.datetime, ols_model.params[0] + (ols_model.params[1]*(np.cos(pi_val_simple * sref_data.datetime))) + (ols_model.params[2]*(np.sin(pi_val_simple * sref_data.datetime))) + (ols_model.params[3]*sref_data.datetime), kind='cubic')
+
+				xnew = np.linspace(sref_data.datetime.min(), sref_data.datetime.max(), 200)
+				ax.plot(xnew, f(xnew), 'green', linewidth=1)
 
 				myFmt = mdates.DateFormatter('%m/%Y')
 				ax.xaxis.set_major_formatter(myFmt)
